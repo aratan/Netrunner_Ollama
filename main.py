@@ -2,40 +2,42 @@ import requests
 import json
 import gradio as gr
 
-url = "http://localhost:11434/api/generate"
-
-headers = {
+URL = "http://localhost:11434/api/generate"
+HEADERS = {
     'Content-Type': 'application/json',
 }
 
-conversation_history = []
+CONVERSATION_HISTORY = []
 
 def generate_response(prompt):
-    conversation_history.append(prompt)
+    try:
+        CONVERSATION_HISTORY.append(prompt)
+        full_prompt = "\n".join(CONVERSATION_HISTORY)
+        data = {
+            "model": "mistral",
+            "stream": False,
+            "prompt": full_prompt,
+        }
 
-    full_prompt = "\n".join(conversation_history)
+        response = requests.post(URL, headers=HEADERS, data=json.dumps(data))
 
-    data = {
-        "model": "netrunner:latest",
-        "stream": False,
-        "prompt": full_prompt,
-    }
+        if response.status_code == 200:
+            response_text = response.text
+            data = json.loads(response_text)
+            actual_response = data["response"]
+            CONVERSATION_HISTORY.append(actual_response)
+            return actual_response
+        else:
+            print("Error:", response.status_code, response.text)
+            return None
 
-    response = requests.post(url, headers=headers, data=json.dumps(data))
-
-    if response.status_code == 200:
-        response_text = response.text
-        data = json.loads(response_text)
-        actual_response = data["response"]
-        conversation_history.append(actual_response)
-        return actual_response
-    else:
-        print("Error:", response.status_code, response.text)
+    except Exception as e:
+        print("An error occurred:", e)
         return None
 
 iface = gr.Interface(
     fn=generate_response,
-    inputs=gr.inputs.Textbox(lines=2, placeholder="Enter your prompt here..."),
+    inputs=gr.Textbox(lines=2, placeholder="Enter your prompt here..."),  # Cambio en la sintaxis
     outputs="text"
 )
 
