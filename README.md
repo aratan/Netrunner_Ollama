@@ -1,1 +1,4 @@
 # OpenChatOllama
+
+## netrunner 
+netrunner esta basado en mistraltrix que es una version mejorada de mixtral8x7b, la cual supera a chatgpt3.5
