@@ -5,6 +5,6 @@ netrunner esta basado en mistraltrix que es una version mejorada de mixtral8x7b,
 
 ## Librerias
 pip install requests gradio
-pip install PyMuPDF
+
 
 
