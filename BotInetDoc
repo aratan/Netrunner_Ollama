@@ -1,0 +1,78 @@
+import requests
+import json
+import gradio as gr
+from bs4 import BeautifulSoup
+
+# Inicialización de la variable CONVERSATION_HISTORY
+CONVERSATION_HISTORY = []
+HEADERS = {'Content-Type': 'application/json'}
+URL = "http://localhost:11434/api/generate"
+
+def obtener_texto_sin_formato(url):
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+        soup = BeautifulSoup(response.content, 'html.parser')
+        salida = '\n'.join(tag.get_text(strip=True) for tag in soup.find_all(['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6']))
+        print("Salida web: " + salida)
+        return salida
+
+    except requests.exceptions.RequestException as e:
+        print(f"Error al obtener la página: {e}")
+        return None
+
+def generate_response(user_input, source, file_name, search_url):
+    try:
+        if source == "web":
+            #full_prompt = "\n".join(CONVERSATION_HISTORY) + f"\n: {obtener_texto_sin_formato(f'{search_url}{user_input}')} {user_input}"
+            full_prompt = "\n".join(CONVERSATION_HISTORY) + f'\n: {obtener_texto_sin_formato(f"{search_url}{user_input}")} "{user_input}"'
+
+        else:
+            with open(file_name, "r") as f:
+                leeme_text = f.read()
+
+            if source == "combined":
+                full_prompt = "\n".join(CONVERSATION_HISTORY) + leeme_text + f"\n: {obtener_texto_sin_formato(f'{search_url}{user_input}')} {user_input}"
+            else:
+                full_prompt = "\n".join(CONVERSATION_HISTORY) + leeme_text + f"\n: {obtener_texto_sin_formato(f'{search_url}{user_input}')} {user_input}"
+
+        data = {
+            "model": "netrunner:latest",
+            "stream": False,
+            "prompt": """ responde en castellano, de forma coherente: """ + full_prompt,
+        }
+
+        response = requests.post(URL, headers=HEADERS, data=json.dumps(data))
+
+        if response.status_code == 200:
+            actual_response = response.json()["response"]
+
+            # Cambia los colores a negro y verde
+            actual_response = f"\n{actual_response}\n"  # Negro y verde
+            
+            # Formatea como Markdown si es código
+            if source == "code":
+                actual_response = f"```\n{actual_response}\n```"
+
+            CONVERSATION_HISTORY.append(actual_response)
+            return actual_response
+        else:
+            print("Error:", response.status_code, response.text)
+            return None
+
+    except Exception as e:
+        print("An error occurred:", e)
+        return None
+
+# Agrega un desplegable para elegir la fuente (web, file, combined),
+# y cuadros de texto para el nombre del archivo y la URL del buscador. mixtral-9x7b
+iface = gr.Interface(
+    fn=generate_response,
+    inputs=[gr.Textbox(lines=2, placeholder="Enter your prompt here..."), 
+            gr.Dropdown(['web', 'file', 'combined'], label="Choose Source"),
+            gr.Textbox(label="File Name", placeholder="Enter file name...", type="text", value="leeme.txt"),
+            gr.Textbox(label="Search URL", placeholder="Enter search URL...", type="text", value="https://search.brave.com/search?q=")],
+    outputs="markdown"  # La salida se formatea como Markdown
+)
+
+iface.launch(share=True)
