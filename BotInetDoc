@@ -20,7 +20,7 @@ def obtener_texto_sin_formato(url):
         response.raise_for_status()
         soup = BeautifulSoup(response.content, 'html.parser')
         salida = '\n'.join(tag.get_text(strip=True) for tag in soup.find_all(['p', 'h1', 'h2', 'h3']))
-        salida = salida[0:100]
+        ## salida = salida[0:100]
         print("Salida web: " + salida)
         
         # Filtrar los datos y limitar a 100 caracteres
